@@ -58,6 +58,10 @@ flags.DEFINE_string(
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
+flags.DEFINE_string(
+    "tokenizer", "FullTokenizer",
+    "The classname of the tokenizer.")
+
 flags.DEFINE_bool(
     "do_lower_case", True,
     "Whether to lower case the input text. Should be True for uncased "
@@ -1132,7 +1136,7 @@ def main(_):
 
   tf.gfile.MakeDirs(FLAGS.output_dir)
 
-  tokenizer = tokenization.FullTokenizer(
+  tokenizer = getattr(tokenization, FLAGS.tokenizer)(
       vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
   tpu_cluster_resolver = None

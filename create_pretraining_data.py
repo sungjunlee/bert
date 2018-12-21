@@ -37,6 +37,10 @@ flags.DEFINE_string(
 flags.DEFINE_string("vocab_file", None,
                     "The vocabulary file that the BERT model was trained on.")
 
+flags.DEFINE_string(
+    "tokenizer", "FullTokenizer",
+    "The classname of the tokenizer.")
+
 flags.DEFINE_bool(
     "do_lower_case", True,
     "Whether to lower case the input text. Should be True for uncased "
@@ -409,7 +413,7 @@ def truncate_seq_pair(tokens_a, tokens_b, max_num_tokens, rng):
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
-  tokenizer = tokenization.FullTokenizer(
+  tokenizer = getattr(tokenization, FLAGS.tokenizer)(
       vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
   input_files = []

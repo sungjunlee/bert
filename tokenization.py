@@ -23,6 +23,7 @@ import re
 import unicodedata
 import six
 import tensorflow as tf
+import sentencepiece as spm
 
 
 def validate_case_matches_checkpoint(do_lower_case, init_checkpoint):
@@ -357,6 +358,86 @@ class WordpieceTokenizer(object):
       else:
         output_tokens.extend(sub_tokens)
     return output_tokens
+
+
+class SentencePieceTokenizer(object):
+  """Runs sentencepiece_tokenization."""
+
+  def __init__(self, model_path, do_lower_case=False):
+    self.model_path = model_path
+    self.do_lower_case = do_lower_case
+    self.sp = spm.SentencePieceProcessor()
+    self.sp = self.sp.Load(model_path)
+
+    self._convert_to_bert_vocab()
+
+  def _convert_to_bert_vocab(self):
+    vocab_path = self.model_path.replace(".model", ".vocab")
+    vocab = []
+    with open(vocab_path, "r") as f:
+      for line in f:
+        vocab.append(line.split("\t")[0])
+
+    self.tfms_map = {
+        self.sp.pad_id(): 0,
+        self.sp.unk_id(): 100,
+        self.sp.bos_id(): 105,
+        self.sp.eos_id(): 106
+    }
+    self.tfms_inv_map = {v: k for k, v in self.tfms_map.items()}
+    self.id_shift = 106
+
+    self.vocab = ["[PAD]"]
+    for i in range(1, 100):
+      self.vocab.append(f"[unused{i}]")
+    self.vocab += ["[UNK]", "[CLS]", "[SEP]", "[MASK]"]
+    self.vocab += vocab
+
+  def tokenize(self, text):
+    text = convert_to_unicode(text)
+    text = self._clean_text(text)
+    orig_tokens = self.sp.EncodeAsPieces(text)
+    tokens = []
+    for token in orig_tokens:
+      if self.do_lower_case:
+        token = token.lower()
+        tokens.append(token)
+    return tokens
+
+  def _sp_to_id(self, t):
+    id = self.sp.PieceToId(t)
+    if id in self.tfms_map:
+      id = self.tfms_map[id]
+    else:
+      id = id + self.id_shift
+
+    return id
+
+  def _sp_to_token(self, i):
+    if i in self.tfms_inv_map:
+      i = self.tfms_inv_map[i]
+    else:
+      i = i - self.id_shift
+    return self.sp.IdToPiece(i)
+
+  def convert_tokens_to_ids(self, tokens):
+    return [self._sp_to_id(t) for t in tokens]
+
+  def convert_ids_to_tokens(self, ids):
+    return [self._sp_to_token(i) for i in ids]
+
+  def _clean_text(self, text):
+    """Performs invalid character removal and whitespace cleanup on text."""
+    output = []
+    for char in text:
+      cp = ord(char)
+      if cp == 0 or cp == 0xfffd or _is_control(char):
+        continue
+      if _is_whitespace(char):
+        output.append(" ")
+      else:
+        output.append(char)
+    return "".join(output)
 
 
 def _is_whitespace(char):

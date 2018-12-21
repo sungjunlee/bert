@@ -55,6 +55,10 @@ flags.DEFINE_string(
 flags.DEFINE_string("vocab_file", None,
                     "The vocabulary file that the BERT model was trained on.")
 
+flags.DEFINE_string(
+    "tokenizer", "FullTokenizer",
+    "The classname of the tokenizer.")
+
 flags.DEFINE_bool(
     "do_lower_case", True,
     "Whether to lower case the input text. Should be True for uncased "
@@ -347,7 +351,7 @@ def main(_):
 
   bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
-  tokenizer = tokenization.FullTokenizer(
+  tokenizer = getattr(tokenization, FLAGS.tokenizer)(
       vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
   is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2

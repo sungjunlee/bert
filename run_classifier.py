@@ -61,6 +61,10 @@ flags.DEFINE_bool(
     "Whether to lower case the input text. Should be True for uncased "
     "models and False for cased models.")
 
+flags.DEFINE_string(
+    "tokenizer", "FullTokenizer",
+    "The classname of the tokenizer.")
+
 flags.DEFINE_integer(
     "max_seq_length", 128,
     "The maximum total input sequence length after WordPiece tokenization. "
@@ -816,7 +820,7 @@ def main(_):
 
   label_list = processor.get_labels()
 
-  tokenizer = tokenization.FullTokenizer(
+  tokenizer = getattr(tokenization, FLAGS.tokenizer)(
       vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
   tpu_cluster_resolver = None
